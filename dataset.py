@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import tv_tensors, datasets, models
 from torchvision.transforms import v2
+from torchvision.datasets import wrap_dataset_for_transforms_v2
 from torchvision.datasets.voc import VOCDetection
 
 
@@ -22,6 +23,7 @@ class TransformWrapper:
 
     def __call__(self, *args, **kwargs):
         transformed_data = self.transforms(*args)
+        print("test")
         """
         """
         transformed_data[1]["target"] = transform_to_yolo_target(
@@ -55,13 +57,14 @@ def get_transforms(is_train=False):
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=voc_mean, std=voc_std)
         ])
-    return transforms
+    return TransformWrapper(transforms)
 
 
 def get_dataloaders(config):
     datasets = [
-        VOCDetection(root="data", year='2007', image_set=set_type,
-                     download=True, transforms=get_transforms(set_type == 'train'))
+        wrap_dataset_for_transforms_v2(
+            VOCDetection(root="data", year='2007', image_set=set_type,
+                         download=True, transforms=get_transforms(set_type == 'train')))
         for set_type in ['train', 'val']
     ]
     train_loader = DataLoader(dataset=datasets[0], batch_size=config.batch_size,
