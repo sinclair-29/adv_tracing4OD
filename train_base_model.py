@@ -2,8 +2,10 @@ import time
 import logging
 import argparse
 
+import torch
+
 from .models import yolov1
-from dataset import
+from dataset import get_dataloaders
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,12 +32,13 @@ def parse_arguments():
 
 
 def train():
-    pass
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def main():
     config = parse_arguments()
-    dataset =
+    train_loader, test_loader = get_dataloaders(config)
+
 
 if __name__ == "__main__":
     main()

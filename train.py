@@ -1,8 +1,11 @@
 import time
 import argparse
 
+import torch
 
-from .models import Yolov1
+from .models import yolov1
+from dataset import get_dataloaders
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -21,8 +24,15 @@ def parse_arguments():
 
     return parser.parse_args()
 
+
+def train():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+
 def main():
     config = parse_arguments()
+    train_loader, test_loader = get_dataloaders(config)
 
 if __name__ == "__main__":
     main()

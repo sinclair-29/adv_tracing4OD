@@ -96,3 +96,4 @@ class Yolov1Backbone(nn.Module):
         x = self.conv_layers(x)
         x = nn.Flatten(x)
         x = self.classifier(x)
+        return torch.reshape(x, (x.size(dim=0), 7, 7, Yolov1Backbone.output_size_per_cell))
