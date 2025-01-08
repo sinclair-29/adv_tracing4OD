@@ -7,16 +7,26 @@ from torchvision.transforms import v2
 from torchvision.datasets.voc import VOCDetection
 
 
-def transform_to_yolo_target():
-    pass
+def transform_to_yolo_target(boxes, labels):
+    return None
 
-class TransformWrappe:
+def collate_fn(batch):
+    images, annotations = zip(*batch)
+    images = torch.stack(images)
+    targets = torch.stack([annotation["target"] for annotation in annotations])
+    return (images, targets)
+
+class TransformWrapper:
     def __init__(self, transforms):
         self.transforms = transforms
 
     def __call__(self, *args, **kwargs):
         transformed_data = self.transforms(*args)
-
+        """
+        """
+        transformed_data[1]["target"] = transform_to_yolo_target(
+            transformed_data[1]["boxes"], transformed_data[1]["labels"]
+        )
         return transformed_data
 
 
@@ -55,9 +65,9 @@ def get_dataloaders(config):
         for set_type in ['train', 'val']
     ]
     train_loader = DataLoader(dataset=datasets[0], batch_size=config.batch_size,
-                              shuffle=True, num_workers=config.num_workers)
+                              shuffle=True, collate_fn=collate_fn, num_workers=config.num_workers)
     test_loader = DataLoader(dataset=datasets[1], batch_size=config.batch_size,
-                              shuffle=False, num_workers=config.num_workers)
+                              shuffle=False, collate_fn=collate_fn, num_workers=config.num_workers)
     return (train_loader, test_loader)
 
 if __name__ == '__main__':
