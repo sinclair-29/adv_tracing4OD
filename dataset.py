@@ -50,9 +50,9 @@ def get_transforms(is_train=False):
 
 def get_dataloaders(config):
     datasets = [
-        VOCDetection(root="data", year='2007', image_set=type,
-                     download=True, transforms=get_transforms(type == 'train'))
-        for type in ['train', 'val']
+        VOCDetection(root="data", year='2007', image_set=set_type,
+                     download=True, transforms=get_transforms(set_type == 'train'))
+        for set_type in ['train', 'val']
     ]
     train_loader = DataLoader(dataset=datasets[0], batch_size=config.batch_size,
                               shuffle=True, num_workers=config.num_workers)
