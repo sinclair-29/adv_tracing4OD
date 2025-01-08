@@ -27,7 +27,7 @@ def get_transforms(is_train=False):
     """
     voc_mean, voc_std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
     if is_train:
-        transforms = v2.Compose[
+        transforms = v2.Compose([
             v2.ToImage(),
             v2.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.1),
             v2.RandomAffine(degrees=0, scale=(0.8, 1.2), translate=(0.1, 0.1), shear=10),
@@ -37,14 +37,14 @@ def get_transforms(is_train=False):
             v2.Resize((448, 448)),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=voc_mean, std=voc_std)
-        ]
+        ])
     else:
-        transforms = v2.Compose[
+        transforms = v2.Compose([
             v2.ToImage(),
             v2.Resize((448, 448)),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=voc_mean, std=voc_std)
-        ]
+        ])
     return transforms
 
 
