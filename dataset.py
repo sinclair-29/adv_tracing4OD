@@ -69,3 +69,4 @@ if __name__ == '__main__':
     config = parser.parse_args()
     train_loader, test_loader = get_dataloaders(config)
     print(len(train_loader), len(test_loader))
+    print(train_loader.dataset[0][0].shape, train_loader.dataset[0][1])
