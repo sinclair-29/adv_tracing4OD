@@ -44,8 +44,7 @@ def transform_to_yolo_target(
 
     if boxes.dim() == 1:
         boxes = boxes.unsqueeze(0)
-    if labels.dim() == 1:
-        labels = labels.unsqueeze(0)
+    
     box_convert(boxes, in_fmt='xyxy', out_fmt='cxcywh')
 
     ground_truth = torch.zeros(num_grid, num_grid, num_classes + 5 * num_box)
@@ -53,7 +52,6 @@ def transform_to_yolo_target(
     for i in range(len(boxes)):
         cell_x, cell_y = get_cell_location(boxes, i)
         if existing_boxes[cell_x, cell_y] < num_box:
-
             ground_truth[cell_x, cell_y, :num_classes] = get_one_hot(labels[i] - 1)
             ground_truth[cell_x, cell_y, num_classes] = 1
             start_index = num_classes + 1 + existing_boxes[cell_x, cell_y] * 5
