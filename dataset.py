@@ -1,15 +1,21 @@
 import argparse
 
 import torch
+from torch import Tensor
 from torch.utils.data import DataLoader
 from torchvision import tv_tensors, datasets, models
 from torchvision.transforms import v2
 from torchvision.datasets import wrap_dataset_for_transforms_v2
 from torchvision.datasets.voc import VOCDetection
+from torchvision.ops import box_convert
 
 
-def transform_to_yolo_target(boxes, labels):
+def transform_to_yolo_target(
+        boxes: BoundingBoxes, labels: Tensor
+) -> Tensor:
     return None
+
+
 
 def collate_fn(batch):
     images, annotations = zip(*batch)
@@ -17,14 +23,19 @@ def collate_fn(batch):
     targets = torch.stack([annotation["target"] for annotation in annotations])
     return (images, targets)
 
+
 class TransformWrapper:
     def __init__(self, transforms):
         self.transforms = transforms
 
     def __call__(self, *args, **kwargs):
         transformed_data = self.transforms(*args)
-        print("test")
+        #print("test")
         """
+        BoundingBoxes is subclass of Tensor
+        
+        'boxes': BoundingBoxes([[174, 131, 335, 322]], format=BoundingBoxFormat.XYXY, canvas_size=(448, 448)) 
+        'labels': tensor([7])
         """
         transformed_data[1]["target"] = transform_to_yolo_target(
             transformed_data[1]["boxes"], transformed_data[1]["labels"]
