@@ -39,7 +39,7 @@ def get_normalized_coordinate(boxes, index):
 
 
 def transform_to_yolo_target(
-        boxes: BoundingBoxes, labels: Tensor, num_box=2, num_grid=7, num_classes=20
+        boxes: BoundingBoxes, labels: Tensor, num_box=1, num_grid=7, num_classes=20
 ) -> Tensor:
 
     if boxes.dim() == 1:
@@ -48,7 +48,7 @@ def transform_to_yolo_target(
     box_convert(boxes, in_fmt='xyxy', out_fmt='cxcywh')
 
     ground_truth = torch.zeros(num_grid, num_grid, num_classes + 5 * num_box)
-    existing_boxes =npy.zeros(shape=[7, 7], dtype=npy.int32)
+    existing_boxes =npy.zeros(shape=[num_grid, num_grid], dtype=npy.int32)
     for i in range(len(boxes)):
         cell_x, cell_y = get_cell_location(boxes, i)
         if existing_boxes[cell_x, cell_y] < num_box:
