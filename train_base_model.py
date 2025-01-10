@@ -1,10 +1,13 @@
+import os
 import time
 import logging
 import argparse
 
 import torch
+import torch.nn as nn
 
-from .models import yolov1
+from models.yololoss import YoloLoss
+from models.yolov1 import Yolov1Head, Yolov1Backbone
 from dataset import get_dataloaders
 
 logging.basicConfig(
@@ -12,6 +15,9 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s: %(message)s ",
     datefmt="%a %d %b %Y %H:%M:%S"
 )
+
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def parse_arguments():
@@ -30,13 +36,35 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train():
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+def train(model, data_loader, criterion, optimizer, epoch, log_interval=100):
+    model.train()
+
+    for idx, (data, target) in enumerate(data_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+
 
 
 def main():
     config = parse_arguments()
     train_loader, test_loader = get_dataloaders(config)
+    head, tail = Yolov1Head(), Yolov1Backbone()
+
+    base_model = nn.Sequential(head, tail).to(device)
+    criterion = YoloLoss()
+    # Adam works better?
+    optimizer = torch.optim.Adam(base_model.parameters(), lr=config.lr)
+
+    for epoch in range(1, config.epochs + 1):
+        train(base_model, train_loader, criterion, optimizer, epoch)
+
+    save_dir = 'saved_models/yolov1'
+    os.makedirs(save_dir, exist_ok=True)
+
 
 
 if __name__ == "__main__":

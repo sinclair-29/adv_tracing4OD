@@ -6,12 +6,14 @@ from torchvision.ops import box_convert, box_iou
 
 def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     """
-    Converts the bounding boxes from normalized yolo format to xyxy format
+    Converts the bounding boxes from normalized yolo format to xyxy format.
+    The tensor size of input and output equal.
 
     Args:
         bboxes (Tensor([batch_size, 7, 7, 2, 4]))
     Returns:
-        bboxes (Tensor([batch_size, 7, 7, 4])) with xyxy format
+        ground_truth: (Tensor([batch_size, 7, 7, 4])) with xyxy format
+        pred: (Tensor([batch_size, 7, 7, 2, 4]))
     """
     batch_size, num_grid, _, num_boxes, _ = bboxes.size()
     # assume the weight of images equals to the height
@@ -51,19 +53,25 @@ def get_responsible_bbox(pred, ground_truth, num_grid=7, num_box=2):
         pred (Tensor([batch_size, 7, 7, 2, 4]))
         ground_truth (Tensor([batch_size, 7, 7, 4]))
     Returns:
-
+        responsible Tensor([batch_size, 7, 7, 2])
     """
     batch_size = pred.size(dim=0)
 
     pred_coordinates = convert_to_xyxy_format(pred)
     ground_truth_coordinates = convert_to_xyxy_format(ground_truth.unsqueeze(-2))
-    num_bbox = batch_size * num_grid * num_grid
-    # ious Tensor(num_bbox, num_bbox, 2)
-    ious = (
-        box_iou(pred_coordinates.view(-1, 4),  ground_truth_coordinates.view(-1, 4))
-    )
+    assert pred_coordinates.size() == pred.size()
+    assert ground_truth_coordinates.size() == ground_truth.size()
 
-    return (responsible_indices, ious)
+    result = torch.zeros(batch_size, num_grid, num_grid, num_box, device=pred.device)
+    for batch_index in range(batch_size):
+        for i in range(num_grid):
+            for j in range(num_grid):
+                ious = box_iou(ground_truth_coordinates[batch_index, i, j, :].unsqueeze(0),
+                               pred_coordinates[batch_index, i, j, :, :])
+                _, idx = ious.max(dim=1)
+                result[batch_index, i, j, idx] = 1
+
+    return result
 
 
 class YoloLoss(nn.Module):
@@ -74,7 +82,7 @@ class YoloLoss(nn.Module):
         super().__init__()
 
     def forword(
-            self, pred: Tensor, grond_truth: Tensor
+            self, pred: Tensor, grond_truth: Tensor, num_classes=20, num_grid=7, num_box=2
     ) -> Tensor:
         """
         Args:
@@ -82,33 +90,37 @@ class YoloLoss(nn.Module):
             grond_truth: (batch_size, 7, 7, 25) [one-hot class, 1, x, y, w, h]
 
         """
-        num_classes = 20
-        num_cell = 7
-        num_box = 2
+        # object_mask Tensor([batch_size, 7, 7])
         object_mask = grond_truth[..., num_classes] == 1
         noobj_mask = ~object_mask
 
-        pred_boxes = pred[..., num_classes:].view(-1, num_cell, num_cell, num_box, 5)
-        groud_truth_boxes = grond_truth[..., num_classes:].view(-1, num_cell, num_cell, 5)
-        obj_ij_mask = None,
-        get_responsible_bbox(pred_boxes[..., 1:], groud_truth_boxes[..., 1:])
+        pred_boxes = pred[..., num_classes:].view(-1, num_grid, num_grid, num_box, 5)
+        ground_truth_boxes = grond_truth[..., num_classes:]
+        obj_ij = get_responsible_bbox(pred_boxes[..., 1:], ground_truth_boxes[..., 1:]) * object_mask
 
+        """
         box_center_loss = torch.sum(
             (pred[] )
         )
 
         box_width_height_loss = torch.sum()
 
-        noobj_confidence_loss = torch.sum(
-            (pred[noobj_mask][..., num_classes] - )
-        )
+        object_confidence_loss = torch.sum()
 
+        noobj_confidence_loss = torch.sum(
+            (pred[noobj_mask][..., num_classes])
+        )
+        """
         class_loss = torch.sum(
             (pred[object_mask][..., :num_classes] - grond_truth[object_mask][..., :num_classes]) ** 2
         )
 
+        """
         result = YoloLoss.lambda_coord * (box_center_loss + box_width_height_loss) \
                + object_confidence_loss \
                + YoloLoss.lambda_noobj * noobj_confidence_loss \
                + class_loss
-        return result
+        """
+        return class_loss
+        
+        #return result
