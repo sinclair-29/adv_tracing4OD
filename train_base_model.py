@@ -36,7 +36,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train(model, data_loader, criterion, optimizer, epoch, log_interval=100):
+def train(model, data_loader, criterion, optimizer, epoch, log_interval=10):
     model.train()
 
     for idx, (data, target) in enumerate(data_loader):
@@ -46,6 +46,10 @@ def train(model, data_loader, criterion, optimizer, epoch, log_interval=100):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
+
+        if idx > 0 and idx % log_interval == 0:
+            logging.info(f'| epoch {epoch} | {idx:2d}/{len(data_loader)} batches '                         
+                         f'| loss {loss.item():.4f}')
 
 
 
