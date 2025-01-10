@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torchvision.ops import box_convert
+from torchvision.ops import box_convert, box_iou
 
 
 def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
@@ -11,7 +11,7 @@ def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     Args:
         bboxes (Tensor([batch_size, 7, 7, 2, 4]))
     Returns:
-        bboxes (Tensor([batch_size, 7, 7, 2, 4])) with xyxy format
+        bboxes (Tensor([batch_size, 7, 7, 4])) with xyxy format
     """
     batch_size, num_grid, _, num_boxes, _ = bboxes.size()
     # assume the weight of images equals to the height
@@ -26,12 +26,14 @@ def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     )
     x_grid_indices = x_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
     y_grid_indices = y_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
-
     denorm_x = cell_size * (norm_x + x_grid_indices)
     denorm_y = cell_size * (norm_y + y_grid_indices)
     denorm_w, denorm_h = norm_w * image_size[0], norm_h * image_size[1]
 
     # xyxy_format tensor[, 4]
+    # xyxy_format size:
+    # pred: [batch_size, 7, 7, 2, 4]
+    # ground-truth: [batch_size, 7, 7, 1, 4]
     xyxy_format = box_convert(
         torch.cat((denorm_x, denorm_y, denorm_w, denorm_h), dim=-1),
         in_fmt="cxcywh", out_fmt="xyxy"
@@ -53,8 +55,13 @@ def get_responsible_bbox(pred, ground_truth, num_grid=7, num_box=2):
     """
     batch_size = pred.size(dim=0)
 
-    convert_to_xyxy_format(pred)
-
+    pred_coordinates = convert_to_xyxy_format(pred)
+    ground_truth_coordinates = convert_to_xyxy_format(ground_truth.unsqueeze(-2))
+    num_bbox = batch_size * num_grid * num_grid
+    # ious Tensor(num_bbox, num_bbox, 2)
+    ious = (
+        box_iou(pred_coordinates.view(-1, 4),  ground_truth_coordinates.view(-1, 4))
+    )
 
     return (responsible_indices, ious)
 
@@ -83,7 +90,14 @@ class YoloLoss(nn.Module):
 
         pred_boxes = pred[..., num_classes:].view(-1, num_cell, num_cell, num_box, 5)
         groud_truth_boxes = grond_truth[..., num_classes:].view(-1, num_cell, num_cell, 5)
+        obj_ij_mask = None,
         get_responsible_bbox(pred_boxes[..., 1:], groud_truth_boxes[..., 1:])
+
+        box_center_loss = torch.sum(
+            (pred[] )
+        )
+
+        box_width_height_loss = torch.sum()
 
         noobj_confidence_loss = torch.sum(
             (pred[noobj_mask][..., num_classes] - )
