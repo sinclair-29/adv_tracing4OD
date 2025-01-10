@@ -19,7 +19,7 @@ def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     # assume the weight of images equals to the height
     cell_size = image_size[0] / num_grid
     # norm_x Tensor([batch_size, 7, 7, 2, 1])
-    norm_x, norm_y, norm_w, norm_h = bboxes.unbind(dim=-1)
+    norm_x, norm_y, norm_w, norm_h = bboxes.split(1, dim=-1)
 
     x_grid_indices, y_grid_indices = torch.meshgrid(
         torch.arange(num_grid, device=bboxes.device),
@@ -28,6 +28,8 @@ def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     )
     x_grid_indices = x_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
     y_grid_indices = y_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
+    print(norm_x.size())
+    print(x_grid_indices.size())
     denorm_x = cell_size * (norm_x + x_grid_indices)
     denorm_y = cell_size * (norm_y + y_grid_indices)
     denorm_w, denorm_h = norm_w * image_size[0], norm_h * image_size[1]
@@ -81,7 +83,7 @@ class YoloLoss(nn.Module):
     def __init__(self, num_classes=20):
         super().__init__()
 
-    def forword(
+    def forward(
             self, pred: Tensor, grond_truth: Tensor, num_classes=20, num_grid=7, num_box=2
     ):
         """
