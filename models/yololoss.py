@@ -28,8 +28,8 @@ def convert_to_xyxy_format(bboxes, image_size=(448, 448)):
     )
     x_grid_indices = x_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
     y_grid_indices = y_grid_indices[None, :, :, None, None].expand(batch_size, num_grid, num_grid, num_boxes, 1)
-    print(norm_x.size())
-    print(x_grid_indices.size())
+    # print(norm_x.size())
+    # print(x_grid_indices.size())
     denorm_x = cell_size * (norm_x + x_grid_indices)
     denorm_y = cell_size * (norm_y + y_grid_indices)
     denorm_w, denorm_h = norm_w * image_size[0], norm_h * image_size[1]
@@ -98,7 +98,9 @@ class YoloLoss(nn.Module):
 
         pred_boxes = pred[..., num_classes:].view(-1, num_grid, num_grid, num_box, 5)
         ground_truth_boxes = grond_truth[..., num_classes:]
-        obj_ij = get_responsible_bbox(pred_boxes[..., 1:], ground_truth_boxes[..., 1:]) * object_mask
+        obj_ij = get_responsible_bbox(pred_boxes[..., 1:], ground_truth_boxes[..., 1:]) * object_mask.unsqueeze(-1)
+        #print("tmp: ", tmp.size())
+        #print("object_mask", object_mask.size())
 
         """
         box_center_loss = torch.sum(
