@@ -83,7 +83,7 @@ class YoloLoss(nn.Module):
 
     def forword(
             self, pred: Tensor, grond_truth: Tensor, num_classes=20, num_grid=7, num_box=2
-    ) -> Tensor:
+    ):
         """
         Args:
             predict: (batch_size, 7, 7, 30) [one-hot class, confidence, x, y, w, h, confidence, x, y, w, h, ]

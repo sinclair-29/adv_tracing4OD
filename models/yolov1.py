@@ -59,7 +59,7 @@ class Yolov1Backbone(nn.Module):
                 nn.LeakyReLU(negative_slope=0.1)
             ]
         components += [
-            nn.Conv2d(512, 512, kerel_size=1),
+            nn.Conv2d(512, 512, kernel_size=1),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Conv2d(512, 1024, kernel_size=3, padding=1),
             nn.LeakyReLU(negative_slope=0.1),
@@ -74,7 +74,7 @@ class Yolov1Backbone(nn.Module):
             ]
         components += [
             nn.Conv2d(1024, 1024, kernel_size=3, padding=1),
-            nn.LeakyReLU(negative_slope=0.1)
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Conv2d(1024, 1024, kernel_size=3, stride=2, padding=1),
             nn.LeakyReLU(negative_slope=0.1)
         ]
@@ -84,7 +84,7 @@ class Yolov1Backbone(nn.Module):
                 nn.LeakyReLU(negative_slope=0.1)
             ]
         self.conv_layers = nn.Sequential(*components)
-
+        self.flatten = nn.Flatten()
         self.classifier = nn.Sequential(
             nn.Linear(7 * 7 * 1024, 4096),
             nn.Dropout(),
@@ -94,6 +94,6 @@ class Yolov1Backbone(nn.Module):
 
     def forward(self, x):
         x = self.conv_layers(x)
-        x = nn.Flatten(x)
+        x = self.flatten(x)
         x = self.classifier(x)
         return torch.reshape(x, (x.size(dim=0), 7, 7, Yolov1Backbone.output_size_per_cell))
