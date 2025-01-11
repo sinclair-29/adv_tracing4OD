@@ -93,6 +93,7 @@ class YoloLoss(nn.Module):
 
         """
         # object_mask Tensor([batch_size, 7, 7])
+        batch_size = pred.size(dim=0)
         object_mask = grond_truth[..., num_classes] == 1
         noobj_mask = ~object_mask
 
@@ -125,6 +126,6 @@ class YoloLoss(nn.Module):
                + YoloLoss.lambda_noobj * noobj_confidence_loss \
                + class_loss
         """
-        return class_loss
+        return class_loss / batch_size
         
         #return result
