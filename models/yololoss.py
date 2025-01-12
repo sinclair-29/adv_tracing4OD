@@ -102,7 +102,15 @@ class YoloLoss(nn.Module):
         pred_boxes = pred[..., num_classes:].view(-1, num_grid, num_grid, num_box, 5)
         ground_truth_boxes = grond_truth[..., num_classes:]
         obj_ij = get_responsible_bbox(pred_boxes[..., 1:], ground_truth_boxes[..., 1:]) * object_mask.unsqueeze(-1)
-        print(obj_ij)
+
+        for batch_index in range(batch_size):
+            count = 0
+            for i in range(num_grid):
+                for j in range(num_grid):
+                    for b in range(2):
+                        if obj_ij[batch_index, i, j, 20 + b * 5] != 0:
+                            count += 1
+            print(f'batch_index: {batch_index}, count: {count}')
         """
         box_center_loss = torch.sum(
             (pred * obj_ij)
