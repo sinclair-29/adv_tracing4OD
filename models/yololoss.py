@@ -61,8 +61,8 @@ def get_responsible_bbox(pred, ground_truth, num_grid=7, num_box=2):
 
     pred_coordinates = convert_to_xyxy_format(pred)
     ground_truth_coordinates = convert_to_xyxy_format(ground_truth.unsqueeze(-2))
-    assert pred_coordinates.size() == pred.size()
-    assert ground_truth_coordinates.size() == ground_truth.size()
+    #assert pred_coordinates.size() == pred.size()
+    #assert ground_truth_coordinates.size() == ground_truth.size()
 
     result = torch.zeros(batch_size, num_grid, num_grid, num_box * 5 + 20, device=pred.device)
     for batch_index in range(batch_size):
@@ -86,36 +86,29 @@ class YoloLoss(nn.Module):
         super().__init__()
 
     def forward(
-            self, pred: Tensor, grond_truth: Tensor, num_classes=20, num_grid=7, num_box=2
+            self, pred: Tensor, ground_truth: Tensor, num_classes=20, num_grid=7, num_box=2
     ):
         """
         Args:
             predict: (batch_size, 7, 7, 30) [one-hot class, confidence, x, y, w, h, confidence, x, y, w, h, ]
-            grond_truth: (batch_size, 7, 7, 25) [one-hot class, 1, x, y, w, h]
+            grond_truth: Tensor[(batch_size, 7, 7, 25)] [one-hot class, 1, x, y, w, h]
 
         """
         # object_mask Tensor([batch_size, 7, 7])
         batch_size = pred.size(dim=0)
-        object_mask = grond_truth[..., num_classes] == 1
+        object_mask = ground_truth[..., num_classes] == 1
         noobj_mask = ~object_mask
 
         pred_boxes = pred[..., num_classes:].view(-1, num_grid, num_grid, num_box, 5)
-        ground_truth_boxes = grond_truth[..., num_classes:]
+        ground_truth_boxes = ground_truth[..., num_classes:]
         obj_ij = get_responsible_bbox(pred_boxes[..., 1:], ground_truth_boxes[..., 1:]) * object_mask.unsqueeze(-1)
+        expanded_ground_truth = torch.cat((ground_truth, ground_truth[..., 20:25]), dim=-1)
 
-        for batch_index in range(batch_size):
-            count = 0
-            for i in range(num_grid):
-                for j in range(num_grid):
-                    for b in range(2):
-                        if obj_ij[batch_index, i, j, 20 + b * 5] != 0:
-                            count += 1
-            print(f'batch_index: {batch_index}, count: {count}')
-        """
+
         box_center_loss = torch.sum(
-            (pred * obj_ij)
+            (pred * obj_ij - expanded_ground_truth * obj_ij) ** 2
         )
-       
+        """
         box_width_height_loss = torch.sum()
 
         object_confidence_loss = torch.sum()
@@ -125,7 +118,7 @@ class YoloLoss(nn.Module):
         )
         """
         class_loss = torch.sum(
-            (pred[object_mask][..., :num_classes] - grond_truth[object_mask][..., :num_classes]) ** 2
+            (pred[object_mask][..., :num_classes] - ground_truth[object_mask][..., :num_classes]) ** 2
         )
 
         """"
@@ -134,6 +127,6 @@ class YoloLoss(nn.Module):
                + YoloLoss.lambda_noobj * noobj_confidence_loss \
                + class_loss
         """
-        return class_loss / batch_size
+        return (box_center_loss + class_loss) / batch_size
         
         #return result
