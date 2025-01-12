@@ -61,8 +61,6 @@ def get_responsible_bbox(pred, ground_truth, num_grid=7, num_box=2):
 
     pred_coordinates = convert_to_xyxy_format(pred)
     ground_truth_coordinates = convert_to_xyxy_format(ground_truth.unsqueeze(-2))
-    #assert pred_coordinates.size() == pred.size()
-    #assert ground_truth_coordinates.size() == ground_truth.size()
 
     result = torch.zeros(batch_size, num_grid, num_grid, num_box * 5 + 20, device=pred.device)
     for batch_index in range(batch_size):
@@ -108,25 +106,27 @@ class YoloLoss(nn.Module):
         box_center_loss = torch.sum(
             (pred * obj_ij - expanded_ground_truth * obj_ij) ** 2
         )
-        """
-        box_width_height_loss = torch.sum()
 
-        object_confidence_loss = torch.sum()
+        box_width_height_loss = torch.sum(
+            (obj_ij * torch.sign(pred) * torch.sqrt(torch.abs(pred) + 1E-6)
+             - obj_ij * torch.sqrt(expanded_ground_truth)) ** 2
+        )
+
+        temp = ((obj_ij * pred) - (obj_ij * expanded_ground_truth))
+        object_confidence_loss = torch.sum(temp[..., num_classes] ** 2) + torch.sum(temp[..., num_classes + 5] ** 2)
 
         noobj_confidence_loss = torch.sum(
-            (pred[noobj_mask][..., num_classes])
+            (pred[noobj_mask][..., num_classes]) ** 2
         )
-        """
+
         class_loss = torch.sum(
             (pred[object_mask][..., :num_classes] - ground_truth[object_mask][..., :num_classes]) ** 2
         )
 
-        """"
+
         result = YoloLoss.lambda_coord * (box_center_loss + box_width_height_loss) \
                + object_confidence_loss \
                + YoloLoss.lambda_noobj * noobj_confidence_loss \
                + class_loss
-        """
-        return (box_center_loss + class_loss) / batch_size
-        
-        #return result
+
+        return result / batch_size
